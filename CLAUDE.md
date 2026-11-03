@@ -1,25 +1,58 @@
-# UMD Events — agent guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 iOS app (SwiftUI + SwiftData, iOS 26+) that aggregates UMD news/events/sports/department stories, summarizes them
-on-device with Apple Intelligence, offers on-device translation, and sends local notifications. No server, no
-third-party dependencies. Start with `wiki/index.md` → `wiki/overview.md`.
+on-device with Apple Intelligence (Foundation Models), offers on-device translation (Translation framework), and
+sends local notifications. No server, no third-party dependencies. Deeper context: `wiki/index.md` → `wiki/overview.md`.
 
-## Build & test
+## Commands
 ```sh
+# build + all tests (Swift Testing, UMDEventsTests/ParserTests.swift)
 xcodebuild test -scheme UMDEvents -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath build
+# a single suite or test (note the trailing "()" for a test function)
+xcodebuild test ... '-only-testing:UMDEventsTests/ICalParserTests'
+xcodebuild test ... '-only-testing:UMDEventsTests/ICalParserTests/unfoldsLines()'
+# wiki health check
 python3 tools/wiki_lint.py
 ```
-The Xcode project uses folder-synchronized groups, so files added under `UMDEvents/` or `UMDEventsTests/` are picked
-up without editing `project.pbxproj`. More recipes (launch flags, screenshots, sqlite): `wiki/guides/testing-and-debugging.md`.
+- The project uses folder-synchronized groups: new files under `UMDEvents/` or `UMDEventsTests/` need no
+  `project.pbxproj` edit. `UMDEvents/Info.plist` is excluded from resources there and merged with generated keys.
+- Hitting the real feeds without the simulator: compile a top-level `main.swift` together with `UMDEvents/Fetching/*.swift`,
+  `UMDEvents/Models/FeedSource.swift` and `UMDEvents/Models/DefaultSources.swift` using `swiftc` (all macOS-compatible).
+- DEBUG-only launch flags for `xcrun simctl launch`: `-skipNotificationPrompt`, `-openArticle <articleID>`;
+  add `-AppleLanguages "(zh-Hans)"` to test Chinese. Screenshot and sqlite recipes: `wiki/guides/testing-and-debugging.md`.
+- Simulator can't exercise AI summaries (`modelNotReady`) or translation (every pair `.unsupported`, so the
+  button is force-shown under `targetEnvironment(simulator)`). Verify those on a device.
 
-## Code conventions
-- Swift 5 language mode; UI types are `@MainActor`; background work goes through the `RefreshPipeline` `@ModelActor`.
-- User-facing strings are SwiftUI literals or `String(localized:)`; add every new key with its `zh-Hans` translation
-  to `UMDEvents/Localizable.xcstrings` (xcodebuild does not sync catalogs).
-- Language rule: follow the system language. AI output uses the system language; original English text gets the
-  Translate button only on non-English systems.
-- Never notify for a source's first fetch; events are never auto-summarized. See `wiki/components/refresh-pipeline.md`.
-- DEBUG-only launch flags: `-skipNotificationPrompt`, `-openArticle <articleID>`.
+## Architecture
+- **Two SwiftData contexts.** `AppEnvironment` (`@MainActor` singleton, `UMDEvents/App/`) owns the `ModelContainer`.
+  Views read through `@Query` on the main context. All fetching and writing during refresh happens in `RefreshPipeline`,
+  a `@ModelActor` with its own context. The same pipeline serves pull-to-refresh (summarize limit 10) and the
+  `BGAppRefreshTask` (limit 3, since background runs get ~30 s). The main context only writes for on-demand work on
+  the screen in front of the user (detail-view summarize/translate, deleting a custom source).
+- **Refresh order** (`UMDEvents/Background/RefreshPipeline.swift`): fetch all sources in parallel → insert new
+  `Article`s → prune → fetch pages for undated items (no AI) → enrich + summarize newest N → post a single notification.
+- **Sources are data, not code.** A `FeedSource` is `.rss`, `.ical`, or `.htmlList(HTMLListRule)` (a regex over
+  absolute link URLs plus an aria-label title prefix, for sites without feeds). Built-ins live in
+  `UMDEvents/Models/DefaultSources.swift`; user feeds are stored in `AppSettings` (UserDefaults). Every parser outputs `FetchedItem`.
+- **Article identity is `"<sourceID>|<guid>"`.** Changing a source `id` re-inserts and re-notifies everything. This
+  ID is also the notification deep-link payload: `AppDelegate` → `AppEnvironment.pendingArticleID` → `ContentView`
+  picks the tab from the sourceID prefix.
+- **Fallback chain for summary text:** `aiSummary` → `rawSummary` (feed/og:description) → start of `content`.
+  `Summarizer` (actor) writes in the system language when the model supports it, otherwise English; after 2 failures it
+  stops retrying. Translation covers only the original title and summary, since the AI text is already localized.
+- **HTML handling** is regex-based (`UMDEvents/Fetching/HTMLText.swift`), deliberately without SwiftSoup.
+
+## Invariants
+- Never notify for a source's first successful fetch (`AppSettings.knownSourceIDs`); disabled notification
+  categories still mark items notified. Events are never auto-summarized; event notifications are off by default.
+- `Article.dateIsEstimated` must stay false for events (they have `eventStart`), or they crowd out real undated stories.
+- Swift 5 language mode; UI types are `@MainActor`.
+- User-facing strings are SwiftUI literals or `String(localized:)`. Add every new key with its `zh-Hans` translation to
+  `UMDEvents/Localizable.xcstrings` by hand (xcodebuild doesn't sync catalogs).
+- Bundle ID and the background-task ID (`com.kinghua.UMDEvents.refresh`) appear in `project.pbxproj`, `Info.plist`
+  and `RefreshScheduler.taskIdentifier`; change them together.
 
 ---
 
