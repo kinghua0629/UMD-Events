@@ -13,7 +13,15 @@ final class AppSettings {
         static let known = "knownSourceIDs"
     }
 
-    private let defaults = UserDefaults.standard
+    var hasCompletedWelcome: Bool {
+        didSet { defaults.set(hasCompletedWelcome, forKey: "hasCompletedWelcome") }
+    }
+
+    var interests: Set<FeedCategory> {
+        didSet { defaults.set(interests.map(\.rawValue), forKey: "interests") }
+    }
+
+    private let defaults: UserDefaults
 
     var disabledSourceIDs: Set<String> {
         didSet { defaults.set(Array(disabledSourceIDs), forKey: Keys.disabled) }
@@ -36,7 +44,11 @@ final class AppSettings {
         didSet { defaults.set(Array(knownSourceIDs), forKey: Keys.known) }
     }
 
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        hasCompletedWelcome = defaults.bool(forKey: "hasCompletedWelcome")
+        interests = defaults.stringArray(forKey: "interests")
+            .map { Set($0.compactMap(FeedCategory.init(rawValue:))) } ?? Set(FeedCategory.allCases)
         disabledSourceIDs = Set(defaults.stringArray(forKey: Keys.disabled) ?? [])
         customSources = defaults.data(forKey: Keys.custom)
             .flatMap { try? JSONDecoder().decode([FeedSource].self, from: $0) } ?? []

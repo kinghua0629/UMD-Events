@@ -17,3 +17,5 @@ Rule from the user: **follow the system language**.
 - `xcodebuild` doesn't sync the catalog. New keys are added by hand (a python snippet in past sessions). Check
   coverage with the grep recipe in [[testing-and-debugging]].
 - To add a language: add it to `knownRegions` in the project and translations in both catalogs.
+
+- Welcome, interests, global/section search, filter options and no-results messages include Simplified Chinese translations. See [[ui]].

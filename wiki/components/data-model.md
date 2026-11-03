@@ -20,3 +20,6 @@ updated: 2026-11-02
 - Schema changes so far are additive (lightweight migration). Use a `VersionedSchema` before any rename or removal.
 - `AppSettings` (UserDefaults): disabled source IDs, custom sources, notify categories (default news/sports/department),
   refresh interval (default 1 h), `knownSourceIDs`.
+
+- `AppSettings.hasCompletedWelcome` and `interests` persist the first-run setup and preferred categories. Existing installations without these keys see the welcome once; all categories default selected. Preferences affect All only, leaving source enablement and notification choices independent.
+- `FeedFilters` combines keyword terms with source/category/read/time constraints; date windows use event start when available and exclude future items, while Upcoming requires a future event start.

@@ -9,7 +9,7 @@ sources: [raw/2026-11-02-simulator-findings.md]
 Current verification status: see [[overview]].
 
 ```sh
-# unit tests (Swift Testing, 13 tests)
+# unit tests (Swift Testing, 17 tests)
 xcodebuild test -scheme UMDEvents -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath build
 # launch in Chinese, skip the notification prompt, open a story directly (DEBUG-only flags)
 xcrun simctl launch <device> com.kinghua.UMDEvents -AppleLanguages "(zh-Hans)" -AppleLocale zh_CN \
@@ -26,3 +26,6 @@ sqlite3 "$(find "$(xcrun simctl get_app_container <device> com.kinghua.UMDEvents
 - **Must test on a device** (iPhone 15 Pro or newer, Apple Intelligence on): AI summaries, translation, background
   refresh (debugger command in [[background-refresh]]), notification delivery and deep link.
 - Simulator limitations are listed in [[gotchas]].
+
+- `UMDEventsTests/FeedFiltersTests.swift` covers multi-term search across fields, combined source/category/read filters, event time boundaries, and welcome/interest persistence using isolated UserDefaults.
+- Latest native navigation revision builds successfully. The Chinese welcome page was visually inspected in the simulator; final tab overflow and all filter controls still need interactive visual verification.

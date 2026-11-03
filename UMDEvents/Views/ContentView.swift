@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AppTab: Hashable {
     case all
+    case search
     case category(FeedCategory)
 }
 
@@ -19,7 +20,16 @@ struct ContentView: View {
             Tab("All", systemImage: "square.stack", value: AppTab.all) {
                 feed(.all)
             }
-            ForEach(FeedCategory.allCases) { category in
+            Tab(value: AppTab.category(.news)) {
+                feed(.category(.news))
+            } label: {
+                Label { Text(FeedCategory.news.title) } icon: { Image(systemName: FeedCategory.news.symbol) }
+            }
+            // Use a regular tab: the search role pins its placement to the system's trailing position.
+            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
+                feed(.search)
+            }
+            ForEach([FeedCategory.events, .sports, .department]) { category in
                 Tab(value: AppTab.category(category)) {
                     feed(.category(category))
                 } label: {
@@ -27,7 +37,10 @@ struct ContentView: View {
                 }
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .fullScreenCover(isPresented: Binding(
+            get: { !settings.hasCompletedWelcome },
+            set: { _ in }
+        )) { WelcomeView() }
         .sheet(isPresented: $showSettings) { SettingsView() }
         .task {
             #if DEBUG
@@ -40,8 +53,17 @@ struct ContentView: View {
             #else
             let skipPrompt = false
             #endif
-            if !skipPrompt { await Notifier.requestAuthorization() }
+            if !skipPrompt && settings.hasCompletedWelcome { await Notifier.requestAuthorization() }
             if environment.isStale { await environment.refresh(summarizeLimit: 10) }
+        }
+        .onChange(of: settings.hasCompletedWelcome) { _, completed in
+            guard completed else { return }
+            Task {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-skipNotificationPrompt") { return }
+                #endif
+                await Notifier.requestAuthorization()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, environment.isStale else { return }
@@ -56,7 +78,7 @@ struct ContentView: View {
 
     private func feed(_ tab: AppTab) -> some View {
         NavigationStack(path: pathBinding(tab)) {
-            FeedListView(category: category(of: tab))
+            FeedListView(category: category(of: tab), globalSearch: tab == .search)
                 .navigationTitle(title(of: tab))
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -78,6 +100,7 @@ struct ContentView: View {
     private func title(of tab: AppTab) -> Text {
         switch tab {
         case .all: Text("UMD Events")
+        case .search: Text("Search")
         case .category(let category): Text(category.title)
         }
     }

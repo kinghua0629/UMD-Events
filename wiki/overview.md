@@ -31,5 +31,5 @@ SwiftUI + SwiftData ([[native-swiftui-over-cross-platform]]), iOS 26+, Swift 5 l
 `UMDEvents/` are picked up automatically.
 
 ## Status (2026-11-02)
-Builds, 13 unit tests pass, all six sources verified live. Not yet verified on a real device: AI summaries,
+Builds, 17 unit tests pass. First-run welcome, saved interests, per-section search/filters, and a global Search page are implemented with native tab navigation (see [[ui]]). All six sources were verified live during initial implementation. Not yet verified on a real device: AI summaries,
 translation, background refresh timing, notification delivery — see [[testing-and-debugging]] and [[gotchas]].

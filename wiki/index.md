@@ -43,3 +43,13 @@ Format: `[[page]]` — one-line summary.
 - `raw/2026-11-02-user-decisions.md` — the user's requirements and follow-up requests
 - `raw/2026-11-02-feed-probe.md` — which UMD URLs have feeds, plus HTML structure notes
 - `raw/2026-11-02-simulator-findings.md` — what the simulator can't do
+
+- `raw/2026-11-02-welcome-search-request.md` — welcome, interest selection, global and per-section search/filter request
+
+- `raw/2026-11-02-search-tab-clarification.md` — global search belongs in the final navigation item
+
+- `raw/2026-11-02-centered-search-request.md` — center the bottom search item
+
+- `raw/2026-11-02-duplicate-navigation-report.md` — duplicate navigation layer after centering search
+
+- `raw/2026-11-02-native-tabs-request.md` — restore system-native navigation instead of a custom bar

@@ -17,6 +17,14 @@ struct SettingsView: View {
         @Bindable var settings = settings
         NavigationStack {
             Form {
+                Section {
+                    InterestPicker()
+                } header: {
+                    Text("Your Interests")
+                } footer: {
+                    Text("Your interests personalize All. Every section and global search remain available.")
+                }
+
                 Section("Apple Intelligence") {
                     AIStatusBanner(status: Summarizer.status)
                 }

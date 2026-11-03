@@ -26,3 +26,27 @@ Created [[translation]] from the user request and `raw/2026-11-02-simulator-find
 
 ## [2026-11-02] lint | Initial health check
 Ran `tools/wiki_lint.py`; no broken links or orphans.
+
+## [2026-11-02] change | Welcome, interests and search
+
+Added first-run welcome and persisted interests, a bottom global search entry, and independent per-section keyword/source/read/time filters. Global search covers all downloaded categories; All follows interests including events. Added Chinese strings and filter/settings regression tests. See [[ui]] and [[data-model]].
+
+## [2026-11-02] change | Search as the final navigation tab
+
+Moved global search from a bottom button/sheet into the final native Search tab, following the user clarification. Retains filters and a separate navigation stack. See [[ui]] and [[bottom-tab-navigation]].
+
+## [2026-11-02] change | Center search navigation
+
+Centered Search in a custom bottom navigation bar with equally sized category groups. Retained category pages and navigation stacks. See [[ui]] and [[bottom-tab-navigation]].
+
+## [2026-11-02] change | Remove duplicate navigation layer
+
+User reported a second navigation layer after centering Search. Removed the system TabView container while retaining independent navigation stacks in ZStack pages. Only the custom bottom bar remains. See [[ui]] and [[bottom-tab-navigation]].
+
+## [2026-11-02] change | Restore native tab navigation
+
+Removed custom navigation and ZStack switching at the user’s request. Restored native TabView with Search as the third regular tab. System overflow controls compact layouts. See [[ui]] and [[bottom-tab-navigation]].
+
+## [2026-11-02] change | Reconcile wiki for GitHub publication
+
+Rewrote [[bottom-tab-navigation]] around the final native TabView decision; updated [[overview]], [[localization]] and [[testing-and-debugging]] for welcome/preferences, search/filter behavior, test coverage and remaining visual checks.

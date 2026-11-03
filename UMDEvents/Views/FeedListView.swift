@@ -3,9 +3,25 @@ import SwiftUI
 
 struct FeedListView: View {
     @Environment(AppEnvironment.self) private var environment
+    @Environment(AppSettings.self) private var settings
     @Query private var articles: [Article]
+    private let category: FeedCategory?
+    private let globalSearch: Bool
+    @State private var searchText = ""
+    @State private var filters = FeedFilters()
 
-    init(category: FeedCategory?) {
+    private var visibleArticles: [Article] {
+        articles.filter { article in
+            (globalSearch || category != nil || settings.interests.contains(article.category))
+                && filters.matches(article, searchText: searchText)
+        }
+    }
+
+    private var sources: [String] { Array(Set(articles.map(\.sourceName))).sorted() }
+
+    init(category: FeedCategory?, globalSearch: Bool = false) {
+        self.category = category
+        self.globalSearch = globalSearch
         let eventsRaw = FeedCategory.events.rawValue
         switch category {
         case .some(.events):
@@ -16,9 +32,7 @@ struct FeedListView: View {
             _articles = Query(filter: #Predicate<Article> { $0.categoryRaw == raw },
                               sort: [SortDescriptor(\Article.published, order: .reverse)])
         case .none:
-            // "All" leaves out events: there are many of them and they have their own tab.
-            _articles = Query(filter: #Predicate<Article> { $0.categoryRaw != eventsRaw },
-                              sort: [SortDescriptor(\Article.published, order: .reverse)])
+            _articles = Query(sort: [SortDescriptor(\Article.published, order: .reverse)])
         }
     }
 
@@ -27,17 +41,53 @@ struct FeedListView: View {
             if !Summarizer.isAvailable {
                 Section { AIStatusBanner(status: Summarizer.status) }
             }
-            ForEach(articles) { article in
+            ForEach(visibleArticles) { article in
                 NavigationLink(value: article.id) {
                     ArticleRow(article: article)
                 }
             }
         }
         .listStyle(.plain)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: globalSearch ? "Search all content" : "Search this section")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Picker("Source", selection: $filters.source) {
+                        Text("All Sources").tag("")
+                        ForEach(sources, id: \.self) { Text($0).tag($0) }
+                    }
+                    Picker("Reading Status", selection: $filters.readState) {
+                        Text("All Stories").tag(FeedFilters.ReadState.all)
+                        Text("Unread").tag(FeedFilters.ReadState.unread)
+                        Text("Read").tag(FeedFilters.ReadState.read)
+                    }
+                    Picker("Time Range", selection: $filters.period) {
+                        Text("Any Time").tag(FeedFilters.Period.any)
+                        Text("Past 7 Days").tag(FeedFilters.Period.week)
+                        Text("Past 30 Days").tag(FeedFilters.Period.month)
+                        Text("Upcoming Events").tag(FeedFilters.Period.upcoming)
+                    }
+                    if globalSearch {
+                        Picker("Category", selection: $filters.category) {
+                            Text("All").tag("")
+                            ForEach(FeedCategory.allCases) { Text($0.title).tag($0.rawValue) }
+                        }
+                    }
+                    Button("Reset Filters") { filters = FeedFilters() }
+                } label: {
+                    Label("Filters", systemImage: filters.isActive
+                          ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+            }
+        }
         .overlay {
-            if articles.isEmpty {
-                if environment.isRefreshing {
+            if visibleArticles.isEmpty {
+                if environment.isRefreshing && articles.isEmpty {
                     ProgressView("Loading…")
+                } else if !searchText.isEmpty || filters.isActive {
+                    ContentUnavailableView("No Results", systemImage: "magnifyingglass",
+                                           description: Text("Try another keyword or reset the filters."))
                 } else {
                     ContentUnavailableView("No Stories Yet", systemImage: "newspaper",
                                            description: Text("Pull down to refresh."))
